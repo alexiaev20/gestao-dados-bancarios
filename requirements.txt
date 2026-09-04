@@ -1,1 +1,4 @@
 bcrypt
+fastapi
+uvicorn
+pydantic
