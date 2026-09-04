@@ -1,101 +1,47 @@
-# banco.py
-
-from transacoes import validar_valor, validar_titular, registrar_transacao, formatar_valor
-from typing import Dict
-
-class Cliente:
-    def __init__(self, nome: str, cpf: str):
-        if not nome or not cpf:
-            raise ValueError("Nome e CPF não podem ser vazios.")
-        self.nome = nome
-        self.cpf = cpf
-
-    def get_nome(self) -> str:
-        return self.nome
-
-    def set_nome(self, nome: str):
-        if not nome:
-            raise ValueError("Nome não pode ser vazio.")
-        self.nome = nome
-
-    def get_cpf(self) -> str:
-        return self.cpf
-
-    def set_cpf(self, cpf: str):
-        if not cpf:
-            raise ValueError("CPF não pode ser vazio.")
-        self.cpf = cpf
-
-class ContaBancaria:
-    def __init__(self, cliente: Cliente, saldo_inicial: float = 0.0):
-        if saldo_inicial < 0:
-            raise ValueError("Saldo inicial não pode ser negativo.")
-        self.cliente = cliente
-        self.saldo = saldo_inicial
-        self.transacoes = []
-        registrar_transacao(cliente.get_nome(), "Abertura da conta", saldo_inicial)
-
-    def depositar(self, valor: float):
-        try:
-            validar_valor(valor)
-            self.saldo += valor
-            self.adicionar_transacao("Depósito", valor)
-            registrar_transacao(self.cliente.get_nome(), "Depósito", valor)
-        except ValueError as e:
-            print(f"Erro ao realizar depósito: {e}")
-
-    def sacar(self, valor: float):
-        try:
-            validar_valor(valor)
-            if valor > self.saldo:
-                raise ValueError("Saldo insuficiente.")
-            self.saldo -= valor
-            self.adicionar_transacao("Saque", -valor)
-            registrar_transacao(self.cliente.get_nome(), "Saque", -valor)
-        except ValueError as e:
-            print(f"Erro ao realizar saque: {e}")
-
-    def extrato(self):
-        print(f"\nExtrato da conta de {self.cliente.get_nome()}:")
-        for transacao in self.transacoes:
-            print(f"{transacao['descricao']}: {formatar_valor(transacao['valor'])}")
-        print(f"Saldo atual: {formatar_valor(self.saldo)}\n")
-
-    def adicionar_transacao(self, descricao: str, valor: float):
-        self.transacoes.append({"descricao": descricao, "valor": valor})
+import sqlite3
+from src.transacoes import validar_valor, validar_cpf
+from src.database import DB_NAME, hash_senha, verificar_senha
 
 class Banco:
-    def __init__(self):
-        self.contas: Dict[str, ContaBancaria] = {}
+    def criar_conta(self, nome: str, cpf: str, senha: str, saldo: float = 0.0):
+        if not validar_cpf(cpf):
+            raise ValueError("CPF invalido.")
+        senha_hash = hash_senha(senha)
+        with sqlite3.connect(DB_NAME) as conn:
+            try:
+                conn.execute("INSERT INTO contas (cpf, nome, senha_hash, saldo) VALUES (?, ?, ?, ?)", (cpf, nome, senha_hash, saldo))
+            except sqlite3.IntegrityError:
+                raise ValueError("Conta ja existe.")
 
-    def criar_conta(self, nome_cliente: str, cpf_cliente: str, saldo_inicial: float = 0.0):
-        if cpf_cliente in self.contas:
-            print("Já existe uma conta com este CPF.")
-            return
-        try:
-            cliente = Cliente(nome_cliente, cpf_cliente)
-            self.contas[cpf_cliente] = ContaBancaria(cliente, saldo_inicial)
-            print(f"Conta criada para {nome_cliente} com saldo inicial de {formatar_valor(saldo_inicial)}.")
-        except ValueError as e:
-            print(f"Erro ao criar conta: {e}")
+    def autenticar(self, cpf: str, senha: str):
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.execute("SELECT senha_hash FROM contas WHERE cpf = ?", (cpf,))
+            row = cursor.fetchone()
+            if not row or not verificar_senha(senha, row[0]):
+                raise ValueError("Credenciais invalidas.")
 
-    def realizar_deposito(self, cpf_cliente: str, valor: float):
-        try:
-            validar_titular(self, cpf_cliente)
-            self.contas[cpf_cliente].depositar(valor)
-        except ValueError as e:
-            print(f"Erro ao realizar depósito: {e}")
+    def depositar(self, cpf: str, valor: float):
+        validar_valor(valor)
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("UPDATE contas SET saldo = saldo + ? WHERE cpf = ?", (valor, cpf))
+            conn.execute("INSERT INTO transacoes (cpf, tipo, valor) VALUES (?, 'deposito', ?)", (cpf, valor))
 
-    def realizar_saque(self, cpf_cliente: str, valor: float):
-        try:
-            validar_titular(self, cpf_cliente)
-            self.contas[cpf_cliente].sacar(valor)
-        except ValueError as e:
-            print(f"Erro ao realizar saque: {e}")
+    def sacar(self, cpf: str, senha: str, valor: float):
+        self.autenticar(cpf, senha)
+        validar_valor(valor)
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.execute("SELECT saldo FROM contas WHERE cpf = ?", (cpf,))
+            row = cursor.fetchone()
+            if not row or row[0] < valor:
+                raise ValueError("Saldo insuficiente.")
+            conn.execute("UPDATE contas SET saldo = saldo - ? WHERE cpf = ?", (valor, cpf))
+            conn.execute("INSERT INTO transacoes (cpf, tipo, valor) VALUES (?, 'saque', ?)", (cpf, valor))
 
-    def emitir_extrato(self, cpf_cliente: str):
-        try:
-            validar_titular(self, cpf_cliente)
-            self.contas[cpf_cliente].extrato()
-        except ValueError as e:
-            print(f"Erro ao emitir extrato: {e}")
+    def extrato(self, cpf: str, senha: str) -> dict:
+        self.autenticar(cpf, senha)
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.execute("SELECT nome, saldo FROM contas WHERE cpf = ?", (cpf,))
+            nome, saldo = cursor.fetchone()
+            cursor = conn.execute("SELECT tipo, valor FROM transacoes WHERE cpf = ?", (cpf,))
+            transacoes = [{"tipo": row[0], "valor": row[1]} for row in cursor.fetchall()]
+        return {"nome": nome, "saldo": saldo, "transacoes": transacoes}
