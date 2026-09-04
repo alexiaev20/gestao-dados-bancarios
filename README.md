@@ -2,7 +2,7 @@
 
 Uma aplicação em **Python** para a gestão e processamento eficiente de dados bancários, utilizando técnicas e bibliotecas nativas para análise e gerenciamento de contas e transações.
 
-## 🚀 Funcionalidades
+##  Funcionalidades
 - **Gestão de Contas**: Criação, atualização e exclusão de contas bancárias.
 - **Transações**: Registro de saques e depósitos com histórico completo.
 - **Relatórios**: Emissão de extrato detalhado por cliente.
@@ -12,7 +12,7 @@ Uma aplicação em **Python** para a gestão e processamento eficiente de dados 
 - **Arquitetura**: Orientação a Objetos (POO)
 - **Testes**: Unittest nativo
 
-## 📂 Estrutura do Projeto
+##  Estrutura do Projeto
 ```text
 gestao-dados-bancarios/
 ├── src/                  # Código fonte principal
@@ -26,7 +26,7 @@ gestao-dados-bancarios/
 └── README.md
 ```
 
-## ⚙️ Como Executar
+##  Como Executar
 1. Clone o repositório:
 ```bash
 git clone https://github.com/alexiaev20/gestao-dados-bancarios.git
