@@ -1,4 +1,7 @@
 import unittest
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from banco import Banco
 from transacoes import formatar_valor, registrar_transacao, validar_valor, validar_titular
 
