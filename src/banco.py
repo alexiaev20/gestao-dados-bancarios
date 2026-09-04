@@ -39,6 +39,7 @@ class ContaBancaria:
         try:
             validar_valor(valor)
             self.saldo += valor
+            self.adicionar_transacao("Depósito", valor)
             registrar_transacao(self.cliente.get_nome(), "Depósito", valor)
         except ValueError as e:
             print(f"Erro ao realizar depósito: {e}")
@@ -49,6 +50,7 @@ class ContaBancaria:
             if valor > self.saldo:
                 raise ValueError("Saldo insuficiente.")
             self.saldo -= valor
+            self.adicionar_transacao("Saque", -valor)
             registrar_transacao(self.cliente.get_nome(), "Saque", -valor)
         except ValueError as e:
             print(f"Erro ao realizar saque: {e}")
