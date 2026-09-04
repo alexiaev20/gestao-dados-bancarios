@@ -7,7 +7,7 @@ Uma aplicação em **Python** para a gestão e processamento eficiente de dados 
 - **Transações**: Registro de saques e depósitos com histórico completo.
 - **Relatórios**: Emissão de extrato detalhado por cliente.
 
-## 🛠️ Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 - **Linguagem**: Python 3
 - **Arquitetura**: Orientação a Objetos (POO)
 - **Testes**: Unittest nativo
